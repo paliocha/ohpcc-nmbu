@@ -20,8 +20,9 @@ encode them. Authoritative policy: the Orion wiki at <https://orion.nmbu.no/>
    analysis of personal sensitive data (medical records, anything identifying a
    living individual). See the Policies page.
 5. **Right-size and be a good neighbour.** Always set `--time` (no default
-   walltime). After a run, check `seff <jobid>` (CPU/memory efficiency) and drop
-   over-requested cores/memory next time. Don't hold idle GPUs. Don't sustain
+   walltime). After a run, check `jobinfo <jobid>` (CPU/memory efficiency; `seff`
+   reports the same but is currently broken on Orion) and drop over-requested
+   cores/memory next time. Don't hold idle GPUs. Don't sustain
    more than ~150 CPUs concurrently for >1 day without emailing
    orion-support@nmbu.no first. `$SCRATCH` is purged after 180 days — move
    keepers to `$PROJECTS`. Compress raw data (`pigz`).

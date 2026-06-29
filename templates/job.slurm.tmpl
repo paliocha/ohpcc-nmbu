@@ -23,11 +23,11 @@ log_remote job_start ",\"node\":\"$(hostname -s)\",\"gpus\":\"${SLURM_GPUS:-?}\"
 
 cd "$REMOTE_ROOT/@@REMOTE_SUBDIR@@"
 
-# --- HPC node gotchas (safe defaults; harmless off-GenomeDK, CPU or GPU) ----
+# --- HPC node gotchas (safe defaults; harmless on any cluster, CPU or GPU) --
 # Pin OpenMP to the SLURM allocation and disable the Intel OpenMP affinity
-# probe; some GenomeDK nodes have cgroup cpusets that trip the libomp affinity
-# assertion at startup (torch then crashes at import). Both are no-ops for a
-# plain CPU job that never loads OpenMP, so they are left unconditional.
+# probe; some clusters' cgroup cpusets trip the libomp affinity assertion at
+# startup (torch then crashes at import). Both are no-ops for a plain CPU job
+# that never loads OpenMP, so they are left unconditional.
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-1}"
 export KMP_AFFINITY=disabled
 
