@@ -2,3 +2,5 @@
 .hpc_root_verified
 hpc.env
 .DS_Store
+__pycache__/
+*.pyc
