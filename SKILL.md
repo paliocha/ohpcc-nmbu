@@ -104,6 +104,12 @@ bash $S/hpc_fetch.sh results/myjob          # rsync a remote subpath back down
   including CPU/memory/walltime efficiency — use it to right-size your next run.
   (`seff` reports the same, but is currently broken on Orion — a missing perl
   library; prefer `jobinfo`, or `sacct -j <jobid> --format=...,MaxRSS,ReqMem`.)
+  Cancel a job with `ssh $HPC_HOST scancel <jobid>` (or `scancel -n <name>`).
+- **Not wrapped (run directly).** `hpc_submit.py` builds a single-node job
+  (`-c` cpus, one task). Multi-node/MPI jobs and "one task per input file" arrays
+  aren't covered by the wrapper — write a custom `sbatch` script (see
+  `reference/cluster-overview.md`) and submit it with `ssh $HPC_HOST sbatch …`.
+  Interactive sessions use `qlogin`/`srun --pty`/Open OnDemand, not these wrappers.
 
 ## Dependencies: micromamba (via `module load Miniforge3`)
 
