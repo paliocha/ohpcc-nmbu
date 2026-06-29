@@ -149,12 +149,12 @@ hpc_verify_root() {
     case "$status" in
         owned) ;;
         missing)
-            echo "hpc: HPC_REMOTE_ROOT does not exist yet on $HPC_HOST: $HPC_REMOTE_ROOT" >&2
+            echo "hpc: HPC_REMOTE_ROOT does not exist yet on $HPC_TRANSFER_HOST: $HPC_REMOTE_ROOT" >&2
             echo "     it will be created on first push — double-check the path in hpc.env is correct." >&2
             ;;
         notowned)
             [ "${HPC_ALLOW_UNOWNED_ROOT:-0}" = 1 ] || hpc_die \
-"HPC_REMOTE_ROOT exists but is not owned by you on $HPC_HOST:
+"HPC_REMOTE_ROOT exists but is not owned by you on $HPC_TRANSFER_HOST:
        $HPC_REMOTE_ROOT
    This often means hpc.env points at the wrong path (e.g. another project).
    If it is genuinely yours (a shared project dir), re-run with HPC_ALLOW_UNOWNED_ROOT=1." ;;
