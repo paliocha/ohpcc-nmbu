@@ -206,8 +206,13 @@ def main() -> None:
     guard_under_root(f"{root}/slurm_logs/{args.name}.slurm", root, "--name")
     guard_under_root(f"{root}/{args.remote_subdir}", root, "--remote-subdir")
 
-    mail_block = (f"#SBATCH --mail-type END,FAIL\n#SBATCH --mail-user {mail_user}\n"
-                  if mail_user else "")
+    # NMBU caps outbound email (~200/day); an array job mailing per task would
+    # rate-limit all the user's mail, so clamp chunked/array jobs to FAIL only.
+    if mail_user:
+        mail_type = "FAIL" if args.chunks > 1 else "END,FAIL"
+        mail_block = f"#SBATCH --mail-type {mail_type}\n#SBATCH --mail-user {mail_user}\n"
+    else:
+        mail_block = ""
     gpu_block = f"#SBATCH --gpus {args.gpus}\n" if args.gpus > 0 else ""
     array_block = f"#SBATCH --array=1-{args.chunks}%1\n" if args.chunks > 1 else ""
     partition_block = f"#SBATCH --partition {args.partition}\n" if args.partition else ""
