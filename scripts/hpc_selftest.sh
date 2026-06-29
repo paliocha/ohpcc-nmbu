@@ -121,6 +121,8 @@ check_absent   "chunked job omits END,FAIL"           '#SBATCH --mail-type END,F
 render_single="$(sub --name s --command 'echo hi' --dry-run 2>/dev/null)"
 check_contains "single job keeps END,FAIL"            '#SBATCH --mail-type END,FAIL' "$render_single"
 
+check_contains "renders module purge before setup" 'module purge' "$render"
+
 render_gpu="$(sub --name g --command 'echo hi' --gpus 2 --dry-run 2>/dev/null)"
 check_contains "renders --gpus when requested"   '#SBATCH --gpus 2'               "$render_gpu"
 check_absent   "omits the array block at chunks=1" '#SBATCH --array'              "$render_gpu"
