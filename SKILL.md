@@ -100,8 +100,10 @@ bash $S/hpc_fetch.sh results/myjob          # rsync a remote subpath back down
 - **Partitions.** `orion` (CPU, default) and `GPU` (uppercase). Never submit to
   the OnDemand partitions. `freecores`/`freenodes` show idle capacity.
 - **Status detail.** `hpc_status.sh` runs `squeue`, falling back to `sacct` for
-  finished jobs. `ssh $HPC_HOST seff <jobid>` reports CPU/memory efficiency
-  (right-size your next run); `jobinfo <jobid>` gives a friendly summary.
+  finished jobs. `ssh $HPC_HOST jobinfo <jobid>` gives a friendly summary
+  including CPU/memory/walltime efficiency — use it to right-size your next run.
+  (`seff` reports the same, but is currently broken on Orion — a missing perl
+  library; prefer `jobinfo`, or `sacct -j <jobid> --format=...,MaxRSS,ReqMem`.)
 
 ## Dependencies: micromamba (via `module load Miniforge3`)
 
