@@ -10,13 +10,13 @@ Ported from [`genomedk-jobs`](https://codeberg.org/cmkobel/genomedk-jobs) (Carl 
 
 ## Why
 
-Running heavy compute on a shared cluster from an AI assistant is useful but risky: a stray `rm -rf`, a runaway login-node process, a transfer that wipes a colleague's results. This skill makes the safe path the easy path:
+Running heavy compute on a shared cluster from an AI assistant is useful but risky: a stray `rm -rf`, a runaway login-node process, a transfer that wipes a colleague's results. The skill is built to prevent that:
 
-- **One config, many projects.** Everything cluster- and project-specific lives in `hpc.env`. The scripts are generic.
-- **Writes are fenced in.** Every remote write is confined to a single `HPC_REMOTE_ROOT` you own; paths are validated against injection and `..` traversal; `rsync` never uses `--delete`.
-- **Two-host aware.** Orion's login node kills anything over 5 minutes, so transfers automatically route through the dedicated file-transfer host.
-- **Audited.** Every action appends one JSON line (intent + outcome only, never data) to a local log.
-- **Optional hard enforcement.** A PreToolUse hook can block destructive bypass commands at the harness level.
+- One config per project. Everything cluster- and project-specific lives in `hpc.env`; the scripts stay generic.
+- Writes are confined to a single `HPC_REMOTE_ROOT` you own. Paths are checked against shell injection and `..` traversal, and `rsync` never uses `--delete`.
+- Transfers go through Orion's file-transfer host, because the login node kills anything over 5 minutes.
+- Every action appends one JSON line to a local audit log (intent and outcome only, never data).
+- An optional PreToolUse hook blocks destructive bypass commands (`rm -rf`, `rsync --delete`) at the harness level.
 
 ---
 
@@ -145,8 +145,8 @@ Orion separates **control** from **data movement**, and so does this skill:
 
 | Operation | Host used | Why |
 |-----------|-----------|-----|
-| `hpc_login.sh`, `hpc_submit.py`, `hpc_status.sh` | `HPC_HOST` → `login.orion.nmbu.no` | submitting and querying SLURM is lightweight |
-| `hpc_push.sh`, `hpc_fetch.sh`, root-ownership check, audit merge | `HPC_TRANSFER_HOST` → `filemanager.orion.nmbu.no` | the login node **kills any command over 5 minutes**, so real transfers must use the data pipe |
+| `hpc_login.sh`, `hpc_submit.py`, `hpc_status.sh` | `HPC_HOST` (`login.orion.nmbu.no`) | submitting and querying SLURM is lightweight |
+| `hpc_push.sh`, `hpc_fetch.sh`, root-ownership check, audit merge | `HPC_TRANSFER_HOST` (`filemanager.orion.nmbu.no`) | the login node kills any command over 5 minutes, so real transfers use the data host |
 
 Both hosts share the same filesystems. On a single-host cluster, leave `HPC_TRANSFER_HOST` unset and everything routes through `HPC_HOST`.
 
@@ -166,7 +166,7 @@ ssh orion 'module load Miniforge3 && micromamba create -f /mnt/project/<group>/<
 HPC_JOB_SETUP='module load Miniforge3; export MAMBA_ROOT_PREFIX=$HOME/.micromamba_root; eval "$(micromamba shell hook --shell bash)"; micromamba activate proj'
 ```
 
-The skill is manager-agnostic — put `module load …`, an Apptainer `apptainer exec …`, or a venv activation in `HPC_JOB_SETUP` instead.
+The skill is manager-agnostic: put `module load …`, an Apptainer `apptainer exec …`, or a venv activation in `HPC_JOB_SETUP` instead.
 
 For I/O-heavy work, stage inputs to the node-local SSD `$TMPDIR` (up to ~15 TB) and copy results back to `$PROJECTS` at the end; reading many small files over NFS is slow and hurts the whole cluster.
 
@@ -174,9 +174,9 @@ For I/O-heavy work, stage inputs to the node-local SSD `$TMPDIR` (up to ~15 TB) 
 
 ## Orion facts baked in
 
-- **Partitions:** `orion` (CPU, default) and `GPU` (uppercase — lowercase `gpu` is rejected by sbatch). The OnDemand partitions (`RStudio`/`JupyterLab`/`OOD`/`TestLab`) are interactive-only — never `sbatch` to them.
+- **Partitions:** `orion` (CPU, default) and `GPU` (uppercase — lowercase `gpu` is rejected by sbatch). The OnDemand partitions (`RStudio`/`JupyterLab`/`OOD`/`TestLab`) are interactive-only; never `sbatch` to them.
 - **Storage:** `$HOME` `/mnt/users/<u>` (200–300 GB) · `$SCRATCH` `/mnt/SCRATCH/<u>` (500 GB–1 TB, **purged after 180 days**) · `$PROJECTS` `/mnt/project/<group>` (persistent) · `$TMPDIR` per-node SSD.
-- **Walltime:** no default — always set `--time`.
+- **Walltime:** no default; always set `--time`.
 - **Email:** NMBU caps outbound mail at ~200/day, so array/chunked jobs are automatically clamped to `--mail-type FAIL`; single jobs get `END,FAIL`.
 - **Monitoring:** `jobinfo <jobid>` for a friendly efficiency summary (`seff` reports the same but is currently broken on Orion); `freecores` / `freenodes` for idle capacity.
 
@@ -219,4 +219,4 @@ The scripts are generic. Point `hpc.env` at another cluster's host / account / p
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
