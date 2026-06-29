@@ -13,7 +13,7 @@ CLI use (from the bash wrappers):
 
 Python use:
     from _hpc_log import log
-    log("rsync_push", host="genomedk", target="...", exit=0)
+    log("rsync_push", host="orion-filemanager", target="...", exit=0)
 """
 from __future__ import annotations
 
