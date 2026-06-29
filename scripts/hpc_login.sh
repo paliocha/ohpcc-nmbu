@@ -1,6 +1,6 @@
 #!/bin/bash
 # Warm up the SSH ControlMaster socket to the cluster. Run once per session;
-# the socket persists per ControlPersist in ~/.ssh/config (12 h on GenomeDK),
+# the socket persists per ControlPersist in ~/.ssh/config (12 h per ControlPersist),
 # and every subsequent ssh/rsync/scp reuses it and skips the OTP/SSO prompt.
 #
 # THE HUMAN TYPES THE OTP, NOT THE ASSISTANT. If a socket is already alive this

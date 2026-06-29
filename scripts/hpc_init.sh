@@ -1,5 +1,5 @@
 #!/bin/bash
-# Scaffold a project to use the genomedk-jobs skill: drop an hpc.env to fill in
+# Scaffold a project to use the ohpcc-nmbu skill: drop an hpc.env to fill in
 # and gitignore the skill's local artifacts. Touches only the target directory
 # and never contacts a cluster. Idempotent — it never overwrites an existing
 # hpc.env, and never duplicates a .gitignore entry.

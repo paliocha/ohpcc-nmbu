@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Claude Code PreToolUse hook for the genomedk-jobs skill — defense in depth.
+"""Claude Code PreToolUse hook for the ohpcc-nmbu skill — defense in depth.
 
 The wrappers confine writes to HPC_REMOTE_ROOT and never delete, but an agent
 could bypass them by running raw `ssh <host> 'rm -rf ...'` or `rsync --delete`
@@ -99,7 +99,7 @@ def main() -> None:
     for pat, reason in RULES:
         if re.search(pat, cmd):
             sys.stderr.write(
-                "genomedk-jobs safety hook BLOCKED this command.\n"
+                "ohpcc-nmbu safety hook BLOCKED this command.\n"
                 f"Reason: {reason}\n"
                 "Use the skill's wrappers (hpc_push.sh / hpc_fetch.sh / "
                 "hpc_submit.py / hpc_status.sh): they confine writes to "

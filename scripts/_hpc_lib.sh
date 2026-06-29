@@ -1,4 +1,4 @@
-# Shared helpers for the genomedk-jobs skill. `source` this from every wrapper:
+# Shared helpers for the ohpcc-nmbu skill. `source` this from every wrapper:
 #     . "$(dirname "$0")/_hpc_lib.sh"; hpc_load_config
 #
 # Provides: config loading, the remote-root safety guard, and audit logging.
@@ -48,7 +48,7 @@ hpc_load_config() {
 
 # Warn (never fail) when HPC_HOST has no SSH connection multiplexing configured.
 # `ssh -G <host>` prints the effective config; without `ControlMaster auto` and a
-# `ControlPath`, a cluster with interactive 2FA (e.g. GenomeDK) re-prompts for the
+# `ControlPath`, a cluster with interactive 2FA (e.g. a 2FA cluster) re-prompts for the
 # OTP on every ssh/rsync — and the assistant cannot type it, so push/submit/
 # status/fetch stall. This turns that confusing failure into one actionable line.
 # Returns 0 if multiplexing looks configured (or cannot be determined), 1 after
@@ -68,7 +68,7 @@ hpc_check_ssh_multiplexing() {
     ref="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." 2>/dev/null && pwd)/reference/ssh_setup.md"
     cat >&2 <<EOF
 hpc: WARNING — SSH connection multiplexing is not configured for "$HPC_HOST".
-     Without it, a cluster with interactive 2FA (e.g. GenomeDK) re-prompts for
+     Without it, a cluster with interactive 2FA (e.g. a 2FA cluster) re-prompts for
      your OTP on every ssh/rsync, and the assistant cannot type it — so push,
      submit, status, and fetch will stall. Most often this just means there is
      no "Host $HPC_HOST" block in ~/.ssh/config.

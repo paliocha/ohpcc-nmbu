@@ -1,5 +1,5 @@
 #!/bin/bash
-# Self-test for the genomedk-jobs skill. Validates the skill's machinery so you
+# Self-test for the ohpcc-nmbu skill. Validates the skill's machinery so you
 # (or Claude Code) can confirm everything is intact after editing or porting it.
 #
 # Usage:
