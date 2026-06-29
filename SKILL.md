@@ -114,9 +114,12 @@ bash $S/hpc_fetch.sh results/myjob          # rsync a remote subpath back down
    ```
    Compute nodes do have internet, but creating once is faster and reproducible.
 3. **Activate in the job** via `HPC_JOB_SETUP` (the example wires
-   `module load Miniforge3; export MAMBA_ROOT_PREFIX=$HOME/.micromamba_root;
-   eval "$(micromamba shell hook --shell bash)"; micromamba activate <env>`),
-   then `--command "python work.py"`.
+   `module load Miniforge3; eval "$(micromamba shell hook --shell bash)";
+   micromamba activate <env>`), then `--command "python work.py"`. `module` and
+   micromamba are available in non-interactive job shells on Orion, so this just
+   works. Keep the env's **root prefix consistent**: the create command above and
+   the activate here both use micromamba's default root (`~/micromamba`); if you
+   set `MAMBA_ROOT_PREFIX`, use the same value in both places or activation fails.
 
 **Using something else?** The skill is manager-agnostic — put `module load …`,
 an Apptainer `apptainer exec …`, or a venv activation in `HPC_JOB_SETUP`.

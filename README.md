@@ -164,7 +164,7 @@ ssh orion 'module load Miniforge3 && micromamba create -f /mnt/project/<group>/<
 
 ```sh
 # in hpc.env — runs at the top of every job:
-HPC_JOB_SETUP='module load Miniforge3; export MAMBA_ROOT_PREFIX=$HOME/.micromamba_root; eval "$(micromamba shell hook --shell bash)"; micromamba activate proj'
+HPC_JOB_SETUP='module load Miniforge3; eval "$(micromamba shell hook --shell bash)"; micromamba activate proj'
 ```
 
 The skill is manager-agnostic: put `module load …`, an Apptainer `apptainer exec …`, or a venv activation in `HPC_JOB_SETUP` instead.

@@ -57,6 +57,11 @@ Snapshot 2026-06-29 (confirm with `nvidia-smi` inside a GPU job):
   #SBATCH --gpus=1
   nvidia-smi
   ```
+- `nvidia-smi` is installed and configured on the GPU node (driver 590.48.01);
+  it is **not** present on the login node (no GPU there). SLURM sets
+  `CUDA_VISIBLE_DEVICES` to your allocation — trust that and your framework's
+  device count; `nvidia-smi` may list more of the node's GPUs than you were
+  granted.
 
 **Toolkit caveat — important for Blackwell.** The Lmod CUDA modules top out at
 **CUDA 12.1** (`module load CUDA/12.1.1`, `nvcc` 12.1.105) and the only `cuDNN`
@@ -84,6 +89,50 @@ bioinformatics (`BLAST+`, `BWA`, `SAMtools`, `BCFtools`, `GATK`, `STAR`, …),
 For Python/R packages not packaged as a module, use a per-user environment via
 `module load Miniforge3` (micromamba) — see `../SKILL.md` and the Orion wiki's
 *Conda environments* page.
+
+## SLURM configuration
+
+Key settings (`scontrol show config`, snapshot 2026-06-29):
+
+| Setting | Value | What it means for you |
+|---------|-------|-----------------------|
+| `ClusterName` | `orion` | |
+| `SelectType` | `select/cons_tres` (`CR_CORE_MEMORY`) | jobs are allocated by **core + memory** — set both `-c`/`--cpus` and `--mem` |
+| `SchedulerType` | `sched/backfill` | accurate, modest `--time`/`--mem` lets your job backfill ahead of big ones and start sooner |
+| `PriorityType` | `priority/multifactor` | fair-share: heavy recent usage lowers your priority |
+| `PreemptMode` | `OFF` | running jobs are never preempted or requeued out from under you |
+| `DefMemPerCPU` | 3000 MB | memory per core if you omit `--mem` |
+| `MaxArraySize` | 200000 | max array index for `--chunks` / `--array` |
+| `GresTypes` | `gpu` | GPUs are the only generic resource; request with `--gpus N` |
+| `AccountingStorageType` | `slurmdbd` | `sacct` / `jobinfo` accounting works |
+| `KillOnBadExit` | 0 | a failing step doesn't auto-kill the job; the job template captures and returns the real exit code itself |
+
+Partitions: `orion` is the default; **no default walltime** (`DefaultTime=NONE`, so always pass `--time`), `MaxTime=UNLIMITED`, `OverSubscribe=NO` (cores are yours exclusively). QOS `normal` sets no hard caps — the real limits are the soft etiquette ones in `safety.md`. The GPU node bills at a higher rate (`billing=552` for the full node), so request only the GPUs you use.
+
+## Interactive jobs
+
+Never run work on the login node (it kills anything over 5 minutes). For an interactive shell on a compute node:
+
+**`qlogin`** — the Orion wrapper around `salloc` + `srun --pty`. It defaults to an 11-hour walltime and starts a **login shell**, so `module` and micromamba are ready. Pass any Slurm options through:
+
+```bash
+qlogin -c 8 --mem 16g                      # CPU shell on the orion partition
+qlogin -p GPU --gpus 1 -c 8 --mem 32g      # GPU shell on gn-41
+qlogin -c 4 --mem 8g -t 2:00:00            # override the 11 h default
+```
+
+You land on the node; `exit` releases the allocation. Good for compiling, debugging, building/testing an environment, or a quick `nvidia-smi`.
+
+**Raw Slurm** for full control:
+
+```bash
+srun -p GPU --account nmbu --gpus 1 -c 8 --mem 32g -t 1:00:00 --pty bash -l
+salloc -p orion -c 8 --mem 16g -t 2:00:00        # hold an allocation, attach steps
+```
+
+**Open OnDemand** (`https://apps.orion.nmbu.no`) gives browser-based Jupyter, RStudio, a desktop, and a terminal, each launched as a Slurm job — the no-terminal path.
+
+This skill itself drives **batch** jobs over SSH; interactive sessions are run directly (above), not through the wrappers.
 
 ## Recovering deleted files (snapshots)
 
