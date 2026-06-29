@@ -96,7 +96,10 @@ bash $S/hpc_fetch.sh results/myjob          # rsync a remote subpath back down
   `--gpus N --partition GPU`.
 - **Long runs: `--chunks N`** emits `#SBATCH --array=1-N%1` (sequential tasks).
   Each task must resume from your checkpoint. Array/chunked jobs are mailed
-  `FAIL` only (NMBU's ~200/day email cap); single jobs get `END,FAIL`.
+  `FAIL` only (NMBU's ~200/day email cap); single jobs get `END,FAIL`. To
+  checkpoint *before* a walltime kill, add `#SBATCH --signal=B:USR1@120` to your
+  `--command`/setup and trap `USR1` — SLURM (24.11 on Orion) delivers it 120 s
+  before `--time` expires.
 - **Partitions.** `orion` (CPU, default) and `GPU` (uppercase). Never submit to
   the OnDemand partitions. `freecores`/`freenodes` show idle capacity.
 - **Status detail.** `hpc_status.sh` runs `squeue`, falling back to `sacct` for
@@ -104,6 +107,9 @@ bash $S/hpc_fetch.sh results/myjob          # rsync a remote subpath back down
   including CPU/memory/walltime efficiency — use it to right-size your next run.
   (`seff` reports the same, but is currently broken on Orion — a missing perl
   library; prefer `jobinfo`, or `sacct -j <jobid> --format=...,MaxRSS,ReqMem`.)
+  For a **still-running** job, `ssh $HPC_HOST sstat -j <jobid>
+  --format=JobID,MaxRSS,AveCPU,TRESUsageInMax` gives live memory/CPU (and
+  `gres/gpumem`,`gres/gpuutil`) — `sacct` only fills in after it finishes.
   Cancel a job with `ssh $HPC_HOST scancel <jobid>` (or `scancel -n <name>`).
   `ssh $HPC_HOST scontrol show job <jobid>` dumps the full live job record
   (state, reason, node, resources) while it is pending/running. When a job fails

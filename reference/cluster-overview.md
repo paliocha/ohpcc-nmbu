@@ -105,22 +105,30 @@ For Python/R packages not packaged as a module, use a per-user environment via
 
 ## SLURM configuration
 
-Key settings (`scontrol show config`, snapshot 2026-06-29):
+Orion runs **SLURM 24.11.0** (`sinfo --version`). Key settings
+(`scontrol show config`, snapshot 2026-06-29):
 
 | Setting | Value | What it means for you |
 |---------|-------|-----------------------|
 | `ClusterName` | `orion` | |
 | `SelectType` | `select/cons_tres` (`CR_CORE_MEMORY`) | jobs are allocated by **core + memory** — set both `-c`/`--cpus` and `--mem` |
 | `SchedulerType` | `sched/backfill` | accurate, modest `--time`/`--mem` lets your job backfill ahead of big ones and start sooner |
-| `PriorityType` | `priority/multifactor` | fair-share: heavy recent usage lowers your priority |
+| `PriorityType` | `priority/multifactor` | fair-share dominates (`PriorityWeightFairShare=1000000` vs age/jobsize 10000, partition 100000); heavy recent usage lowers priority, decaying with a **14-day half-life** |
 | `PreemptMode` | `OFF` | running jobs are never preempted or requeued out from under you |
+| `TaskPlugin` / `ProctrackType` | `task/cgroup,task/affinity` / `proctrack/cgroup` | every job is **cgroup-confined**: you cannot use more cores/RAM/GPU than allocated. Threads beyond `-c` oversubscribe your cores (slower, not more); RAM over `--mem` is OOM-killed; all child processes are tracked and cleaned up — nothing escapes the job |
+| `PrologFlags` | `Alloc,Contain` | each job gets a private, auto-cleaned `$TMPDIR` and process namespace on the node |
+| `TmpFS` | `/work/users` | node-local scratch root (the NVMe SSD); your auto-cleaned per-job `$TMPDIR` lives under here — stage I/O-heavy work in `$TMPDIR`, not over NFS |
+| `JobRequeue` | 1 | a `NODE_FAIL` (or `scontrol requeue`) **auto-resubmits** the job from scratch — make work idempotent/checkpointed, or pass `--no-requeue` if a rerun would corrupt output |
 | `DefMemPerCPU` | 3000 MB | memory per core if you omit `--mem` |
-| `MaxArraySize` | 200000 | max array index for `--chunks` / `--array` |
-| `GresTypes` | `gpu` | GPUs are the only generic resource; request with `--gpus N` |
-| `AccountingStorageType` | `slurmdbd` | `sacct` / `jobinfo` accounting works |
+| `MaxArraySize` / `MaxJobCount` / `MaxStepCount` | 200000 / 500000 / 40000 | array-index and queue ceilings — far above normal use |
+| `GresTypes` | `gpu` | GPUs are the only *requestable* generic resource (`--gpus N`); `gres/gpumem` and `gres/gpuutil` are **accounted** (not requested), so `jobinfo`/`sacct` report GPU memory and utilization |
+| `MailProg` / `JobSubmitPlugins` | `/usr/bin/mail` / none | `--mail-type` works (incl. `TIME_LIMIT_80`, `ARRAY_TASKS`); nothing silently rewrites your submit request — what you ask is what you get |
+| `AccountingStorageType` | `slurmdbd` | `sacct` / `jobinfo` / `sstat` accounting works |
 | `KillOnBadExit` | 0 | a failing step doesn't auto-kill the job; the job template captures and returns the real exit code itself |
 
-Partitions: `orion` is the default; **no default walltime** (`DefaultTime=NONE`, so always pass `--time`), `MaxTime=UNLIMITED`, `OverSubscribe=NO` (cores are yours exclusively). QOS `normal` sets no hard caps — the real limits are the soft etiquette ones in `safety.md`. The GPU node bills at a higher rate (`billing=552` for the full node), so request only the GPUs you use.
+Partitions: `orion` is the default; **no default walltime** (`DefaultTime=NONE`, so always pass `--time`), `MaxTime=UNLIMITED`, `OverSubscribe=NO` (cores are yours exclusively). QOS `normal` has priority 0 and **no hard caps** (no `MaxWall`/`MaxJobs`/`MaxTRES`) — the real limits are the soft etiquette ones in `safety.md`. The GPU partition's billing is weighted (`TRESBillingWeights=cpu=1.0,gres/gpu=24.0`): **one GPU costs the same as 24 CPU cores**, and the full node bills `552` (384 cores + 7×24). Request only the GPUs you use.
+
+**Checkpoint on timeout.** Because `MaxTime=UNLIMITED` but long jobs still risk node events, have `--time`-bounded work save state before SLURM kills it: `#SBATCH --signal=B:USR1@120` delivers `SIGUSR1` to the batch step 120 s before the walltime, so a trap can checkpoint and exit cleanly (then resume via `--chunks`). This is the graceful-shutdown counterpart to the resume-from-checkpoint requirement on array/chunked jobs.
 
 ## Interactive jobs
 

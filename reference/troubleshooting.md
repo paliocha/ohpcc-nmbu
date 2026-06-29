@@ -6,8 +6,11 @@ Diagnose a job by symptom. Most answers come from three commands — run them fi
 ssh orion 'squeue -u $USER'                # is it pending/running, and why (REASON column)
 ssh orion 'jobinfo <jobid>'                # friendly per-job summary + efficiency (seff is broken)
 ssh orion 'sacct -j <jobid> --format=JobID,State,ExitCode,Elapsed,MaxRSS,ReqMem'
+ssh orion 'sstat -j <jobid> --format=JobID,MaxRSS,AveCPU,TRESUsageInMax'  # LIVE metrics of a running job (sacct is post-hoc)
 bash scripts/hpc_fetch.sh slurm_logs/      # pull <jobid>.out / .err down to read locally
 ```
+
+GPU jobs: `TRESUsageInMax`/`TRESUsageInAve` (from `sstat`/`sacct`) report `gres/gpumem` and `gres/gpuutil`, since both are accounted — use them to confirm a GPU job is actually saturating the card before asking for more.
 
 ## Can't connect / push / submit
 
@@ -37,9 +40,9 @@ bash scripts/hpc_fetch.sh slurm_logs/      # pull <jobid>.out / .err down to rea
 | State / output | Cause |
 |----------------|-------|
 | `TIMEOUT` | Hit `--time`. Increase it, checkpoint, or use `--chunks`. |
-| `OUT_OF_MEMORY`, or `FAILED` `ExitCode 137` | Hit `--mem` (OOM-killed). Increase `--mem`. |
+| `OUT_OF_MEMORY`, or `FAILED` `ExitCode 137` | Hit `--mem` — the cgroup OOM-killed you (you can't exceed the allocation). Increase `--mem`. |
 | `FAILED` `ExitCode 1` (or other non-zero) | Your program errored. Read `<jobid>.err` / `.out`. |
-| `NODE_FAIL` | The node went down. Resubmit. |
+| `NODE_FAIL` then `REQUEUED`/`PENDING` again | Node went down; `JobRequeue=1` **auto-resubmits from scratch**. Fine if idempotent/checkpointed; if a rerun corrupts output, submit with `--no-requeue`. |
 | `CANCELLED by <uid>` | Team Orion cancelled it — check your email. |
 
 ## Job is slow
