@@ -15,7 +15,9 @@ encode them. Authoritative policy: the Orion wiki at <https://orion.nmbu.no/>
    The first push/submit verifies over SSH that the root is owned by you.
 3. **`rsync` never uses `--delete`.** The wrappers never pass it. Push still
    *overwrites* a differing remote file — preview with `--dry-run`, or set
-   `HPC_PUSH_BACKUP=1`.
+   `HPC_PUSH_BACKUP=1`. A delete or overwrite under `$HOME`/`$PROJECTS`/`$SCRATCH`
+   is usually recoverable from read-only filesystem snapshots — see
+   `cluster-overview.md` (Recovering deleted files).
 4. **No personal/sensitive/GDPR data on Orion.** Orion does not store or support
    analysis of personal sensitive data (medical records, anything identifying a
    living individual). See the Policies page.

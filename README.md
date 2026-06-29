@@ -40,7 +40,8 @@ ohpcc-nmbu/
 ├── templates/job.slurm.tmpl    # generic SBATCH template (@@PLACEHOLDER@@ substitution)
 └── reference/
     ├── ssh_setup.md            # the ~/.ssh/config blocks to add
-    └── safety.md               # the hard rules for a shared cluster
+    ├── safety.md               # the hard rules for a shared cluster
+    └── cluster-overview.md     # nodes, partitions, modules, snapshot recovery
 ```
 
 ---
