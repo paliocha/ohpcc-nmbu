@@ -17,18 +17,20 @@ fi
 hpc_load_config
 hpc_check_ssh_multiplexing || true   # warn-only; never blocks a login attempt
 
-if ssh -O check "$HPC_HOST" 2>/dev/null; then
-    echo "ssh master socket to $HPC_HOST already alive."
-    hpc_audit hpc_login_reuse --host "$HPC_HOST" --exit 0
-    exit 0
-fi
+hosts="$HPC_HOST"
+[ "$HPC_TRANSFER_HOST" != "$HPC_HOST" ] && hosts="$hosts $HPC_TRANSFER_HOST"
 
-echo "Opening ssh master socket to $HPC_HOST (type your OTP/credential at the prompt)..."
-# `ssh -fN` backgrounds the client before authentication, which prevents the
-# interactive OTP prompt from rendering. Run a no-op foreground command
-# instead — it triggers auth, runs `true`, exits, and the multiplexed master
-# socket persists per ControlPersist in ~/.ssh/config.
 rc=0
-ssh "$HPC_HOST" true || rc=$?
-hpc_audit hpc_login_open --host "$HPC_HOST" --exit "$rc"
+for h in $hosts; do
+    if ssh -O check "$h" 2>/dev/null; then
+        echo "ssh master socket to $h already alive."
+        hpc_audit hpc_login_reuse --host "$h" --exit 0
+        continue
+    fi
+    echo "Opening ssh master socket to $h (type your credential at the prompt if asked)..."
+    hrc=0
+    ssh "$h" true || hrc=$?
+    hpc_audit hpc_login_open --host "$h" --exit "$hrc"
+    [ "$hrc" -ne 0 ] && rc="$hrc"
+done
 exit "$rc"
