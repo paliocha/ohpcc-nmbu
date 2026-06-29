@@ -35,11 +35,11 @@ local_dest="${2:-$HPC_LOCAL_ROOT/$sub}"
 mkdir -p "$(dirname "$local_dest")"
 
 rc=0
-rsync -azP ${DRY[@]+"${DRY[@]}"} "$HPC_HOST:$remote" "$local_dest" || rc=$?
-hpc_audit rsync_pull --host "$HPC_HOST" --target "$sub" --dry "${#DRY[@]}" --exit "$rc"
+rsync -azP ${DRY[@]+"${DRY[@]}"} "$HPC_TRANSFER_HOST:$remote" "$local_dest" || rc=$?
+hpc_audit rsync_pull --host "$HPC_TRANSFER_HOST" --target "$sub" --dry "${#DRY[@]}" --exit "$rc"
 
 # Bring the SLURM-side audit log down too (independent of the fetch above).
 hpc_merge_remote_audit
 
 [ "$rc" -eq 0 ] || hpc_die "rsync pull failed (rc=$rc)"
-echo "fetched $HPC_HOST:$remote -> $local_dest"
+echo "fetched $HPC_TRANSFER_HOST:$remote -> $local_dest"

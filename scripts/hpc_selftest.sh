@@ -45,14 +45,15 @@ TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 cat > "$TMP/hpc.env" <<EOF
 HPC_HOST=selftest-host
+HPC_TRANSFER_HOST=selftest-transfer
 HPC_USER=tester
 HPC_ACCOUNT=test_account
-HPC_REMOTE_ROOT=/faststorage/project/test/root
-HPC_PARTITION=gpu-l40s
+HPC_REMOTE_ROOT=/mnt/project/test/root
+HPC_PARTITION=GPU
 HPC_MAIL_USER=tester@example.com
 HPC_CODE_SUBDIR=repo
 HPC_PUSH_PATHS="src scripts"
-HPC_JOB_SETUP='export TORCH_HOME=\$REMOTE_ROOT/.torch-cache'
+HPC_JOB_SETUP='export DATA=\$REMOTE_ROOT/data'
 HPC_AUDIT_LOG=$TMP/.hpc_audit.log
 EOF
 cat > "$TMP/bad_relative.env" <<'EOF'
@@ -75,8 +76,19 @@ HPC_CONFIG="$TMP/nope.env" expect_fail "dies on a missing config" \
 HPC_CONFIG="$TMP/bad_relative.env" expect_fail "rejects a relative HPC_REMOTE_ROOT" \
     bash -c '. "$0"; hpc_load_config' "$LIB"
 
+section "Transfer host (HPC_TRANSFER_HOST)"
+HPC_CONFIG="$TMP/hpc.env" expect_ok "uses explicit HPC_TRANSFER_HOST when set" \
+    bash -c '. "$0"; hpc_load_config; [ "$HPC_TRANSFER_HOST" = selftest-transfer ]' "$LIB"
+cat > "$TMP/notransfer.env" <<EOF2
+HPC_HOST=onlyhost
+HPC_ACCOUNT=a
+HPC_REMOTE_ROOT=/mnt/project/x
+EOF2
+HPC_CONFIG="$TMP/notransfer.env" expect_ok "HPC_TRANSFER_HOST defaults to HPC_HOST when unset" \
+    bash -c '. "$0"; hpc_load_config; [ "$HPC_TRANSFER_HOST" = onlyhost ]' "$LIB"
+
 section "Remote-root guard (hpc_guard_remote)"
-ROOT=/faststorage/project/test/root
+ROOT=/mnt/project/test/root
 guard() { HPC_REMOTE_ROOT="$ROOT" bash -c '. "$1"; hpc_guard_remote "$2"' _ "$LIB" "$1"; }
 expect_ok   "accepts a path under the root"      guard "$ROOT/results/my-job_1"
 expect_ok   "accepts the root itself"            guard "$ROOT"
@@ -97,11 +109,11 @@ expect_fail "rejects escaping --remote-subdir"   sub --name ok --remote-subdir .
 
 render="$(sub --name selftest --command 'python work.py' --gpus 0 --chunks 3 --dry-run 2>/dev/null)"
 check_contains "renders the account directive"   '#SBATCH --account test_account' "$render"
-check_contains "renders the partition"           '#SBATCH --partition gpu-l40s'   "$render"
+check_contains "renders the partition"           '#SBATCH --partition GPU'   "$render"
 check_contains "renders the array block (chunks)" '#SBATCH --array=1-3%1'         "$render"
 check_contains "renders the mail-user"           '#SBATCH --mail-user tester@example.com' "$render"
 check_contains "renders the command"             'python work.py'                "$render"
-check_contains "keeps \$REMOTE_ROOT literal in setup" 'export TORCH_HOME=$REMOTE_ROOT/.torch-cache' "$render"
+check_contains "keeps \$REMOTE_ROOT literal in setup" 'export DATA=$REMOTE_ROOT/data' "$render"
 check_absent   "omits --gpus when --gpus 0"      '#SBATCH --gpus'                 "$render"
 
 render_gpu="$(sub --name g --command 'echo hi' --gpus 2 --dry-run 2>/dev/null)"
@@ -129,11 +141,12 @@ hook_ec() {
 }
 expect_block() { local d="$1"; if [ "$(hook_ec "$2")" = 2 ]; then ok "$d"; else bad "$d"; fi; }
 expect_allow() { local d="$1"; if [ "$(hook_ec "$2")" = 0 ]; then ok "$d"; else bad "$d"; fi; }
-expect_block "blocks rsync --delete to the host"  "rsync -az --delete ./x selftest-host:/faststorage/project/test/root/"
-expect_block "blocks 'ssh host rm -rf'"           "ssh selftest-host 'rm -rf /faststorage/project/test/root/out'"
+expect_block "blocks rsync --delete to the host"  "rsync -az --delete ./x selftest-host:/mnt/project/test/root/"
+expect_block "blocks rsync --delete to the TRANSFER host" "rsync -az --delete ./x selftest-transfer:/mnt/project/test/root/"
+expect_block "blocks 'ssh host rm -rf'"           "ssh selftest-host 'rm -rf /mnt/project/test/root/out'"
 expect_block "blocks 'ssh host mkfs'"             "ssh selftest-host mkfs.ext4 /dev/sdb"
 expect_allow "allows a wrapper invocation"        "bash scripts/hpc_push.sh"
-expect_allow "allows a normal rsync push"         "rsync -azP ./src selftest-host:/faststorage/project/test/root/repo/"
+expect_allow "allows a normal rsync push"         "rsync -azP ./src selftest-host:/mnt/project/test/root/repo/"
 expect_allow "allows 'ssh host squeue'"           "ssh selftest-host squeue -u me"
 expect_allow "allows a local rm (not the host)"   "rm -rf /tmp/scratch"
 expect_allow "allows local rsync --delete (no host)" "rsync -a --delete ./a ./b"
@@ -142,7 +155,7 @@ expect_block "blocks '> /etc/...' (system path)"   "ssh selftest-host 'echo x > 
 expect_block "blocks '> /dev/sda' (device write)"  "ssh selftest-host 'cat z > /dev/sda'"
 
 section "Root verification (cached marker)"
-printf 'selftest-host::/faststorage/project/test/root\n' > "$TMP/.hpc_root_verified"
+printf 'selftest-transfer::/mnt/project/test/root\n' > "$TMP/.hpc_root_verified"
 HPC_CONFIG="$TMP/hpc.env" expect_ok "hpc_verify_root short-circuits on a matching marker (no ssh)" \
     bash -c '. "$0"; hpc_load_config; hpc_verify_root' "$LIB"
 rm -f "$TMP/.hpc_root_verified"
@@ -182,7 +195,7 @@ STUB="$TMP/stubbin"; mkdir -p "$STUB"
 printf '#!/bin/sh\nexit 0\n' > "$STUB/ssh"
 printf '#!/bin/sh\nexit 0\n' > "$STUB/rsync"
 chmod +x "$STUB/ssh" "$STUB/rsync"
-printf 'selftest-host::/faststorage/project/test/root\n' > "$TMP/.hpc_root_verified"
+printf 'selftest-transfer::/mnt/project/test/root\n' > "$TMP/.hpc_root_verified"
 expect_ok "hpc_push.sh runs end-to-end (no --dry-run) under bash $BASH_VERSION" \
     env "PATH=$STUB:$PATH" "HPC_CONFIG=$TMP/hpc.env" bash "$HERE/hpc_push.sh"
 expect_ok "hpc_fetch.sh runs end-to-end (no --dry-run) under bash $BASH_VERSION" \

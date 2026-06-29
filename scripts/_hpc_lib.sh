@@ -42,7 +42,8 @@ hpc_load_config() {
     : "${HPC_LOCAL_ROOT:=$(cd "$(dirname "$cfg")" && pwd)}"
     : "${HPC_AUDIT_LOG:=$HPC_LOCAL_ROOT/.hpc_audit.log}"
     : "${HPC_CODE_SUBDIR:=repo}"
-    export HPC_HOST HPC_ACCOUNT HPC_REMOTE_ROOT HPC_LOCAL_ROOT HPC_AUDIT_LOG HPC_CODE_SUBDIR HPC_CONFIG
+    : "${HPC_TRANSFER_HOST:=$HPC_HOST}"
+    export HPC_HOST HPC_ACCOUNT HPC_REMOTE_ROOT HPC_LOCAL_ROOT HPC_AUDIT_LOG HPC_CODE_SUBDIR HPC_CONFIG HPC_TRANSFER_HOST
 }
 
 # Warn (never fail) when HPC_HOST has no SSH connection multiplexing configured.
@@ -122,7 +123,7 @@ hpc_audit() {
 hpc_merge_remote_audit() {
     local remote_audit="$HPC_REMOTE_ROOT/audit.remote.log" tmp line
     tmp="$(mktemp)" || return 0
-    if rsync -az "$HPC_HOST:$remote_audit" "$tmp" 2>/dev/null; then
+    if rsync -az "$HPC_TRANSFER_HOST:$remote_audit" "$tmp" 2>/dev/null; then
         touch "$HPC_AUDIT_LOG"
         while IFS= read -r line; do
             [ -n "$line" ] || continue
@@ -139,11 +140,11 @@ hpc_merge_remote_audit() {
 # HPC_ALLOW_UNOWNED_ROOT=1. Callers: hpc_push.sh, hpc_submit.py (mirrored).
 hpc_verify_root() {
     local marker="$HPC_LOCAL_ROOT/.hpc_root_verified" want status
-    want="$HPC_HOST::$HPC_REMOTE_ROOT"
+    want="$HPC_TRANSFER_HOST::$HPC_REMOTE_ROOT"
     [ -f "$marker" ] && [ "$(cat "$marker" 2>/dev/null)" = "$want" ] && return 0
 
-    status="$(ssh "$HPC_HOST" "if [ ! -e '$HPC_REMOTE_ROOT' ]; then echo missing; elif [ -O '$HPC_REMOTE_ROOT' ]; then echo owned; else echo notowned; fi" 2>/dev/null)" \
-        || hpc_die "could not reach $HPC_HOST to verify HPC_REMOTE_ROOT — is the SSH socket up? (run hpc_login.sh)"
+    status="$(ssh "$HPC_TRANSFER_HOST" "if [ ! -e '$HPC_REMOTE_ROOT' ]; then echo missing; elif [ -O '$HPC_REMOTE_ROOT' ]; then echo owned; else echo notowned; fi" 2>/dev/null)" \
+        || hpc_die "could not reach $HPC_TRANSFER_HOST to verify HPC_REMOTE_ROOT — is the SSH socket up? (run hpc_login.sh)"
 
     case "$status" in
         owned) ;;

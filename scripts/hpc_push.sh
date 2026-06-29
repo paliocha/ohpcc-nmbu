@@ -53,10 +53,10 @@ if [ "${HPC_PUSH_BACKUP:-0}" = 1 ]; then
 fi
 
 if [ "${#DRY[@]}" -eq 0 ]; then
-    ssh "$HPC_HOST" "mkdir -p '$remote'"
+    ssh "$HPC_TRANSFER_HOST" "mkdir -p '$remote'"
 fi
 rc=0
-rsync -azP ${DRY[@]+"${DRY[@]}"} ${backup[@]+"${backup[@]}"} "${EXCLUDES[@]}" "${locals[@]}" "$HPC_HOST:$remote/" || rc=$?
-hpc_audit rsync_push --host "$HPC_HOST" --target "$remote/" --dry "${#DRY[@]}" --exit "$rc"
+rsync -azP ${DRY[@]+"${DRY[@]}"} ${backup[@]+"${backup[@]}"} "${EXCLUDES[@]}" "${locals[@]}" "$HPC_TRANSFER_HOST:$remote/" || rc=$?
+hpc_audit rsync_push --host "$HPC_TRANSFER_HOST" --target "$remote/" --dry "${#DRY[@]}" --exit "$rc"
 [ "$rc" -eq 0 ] || hpc_die "rsync push failed (rc=$rc)"
-echo "pushed -> $HPC_HOST:$remote/"
+echo "pushed -> $HPC_TRANSFER_HOST:$remote/"

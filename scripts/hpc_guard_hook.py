@@ -52,8 +52,8 @@ RULES = [
 ]
 
 
-def find_host() -> str | None:
-    """Read HPC_HOST from the project's hpc.env (same search order as the wrappers)."""
+def find_hosts() -> list[str]:
+    """Read HPC_HOST and HPC_TRANSFER_HOST from the project's hpc.env."""
     candidates = []
     if os.environ.get("HPC_CONFIG"):
         candidates.append(Path(os.environ["HPC_CONFIG"]))
@@ -61,17 +61,25 @@ def find_host() -> str | None:
     for d in (cwd, *cwd.parents):
         candidates.append(d / "hpc.env")
         candidates.append(d / ".hpc" / "hpc.env")
+    hosts: dict[str, str] = {}
     for p in candidates:
         try:
             if not p.is_file():
                 continue
             for line in p.read_text().splitlines():
                 key, sep, val = line.strip().partition("=")
-                if sep and key.strip() == "HPC_HOST":
-                    return val.strip().strip('"').strip("'")
+                if sep and key.strip() in ("HPC_HOST", "HPC_TRANSFER_HOST"):
+                    hosts[key.strip()] = val.strip().strip('"').strip("'")
+            if hosts:
+                break
         except OSError:
             continue
-    return None
+    out = []
+    if hosts.get("HPC_HOST"):
+        out.append(hosts["HPC_HOST"])
+    if hosts.get("HPC_TRANSFER_HOST") and hosts["HPC_TRANSFER_HOST"] not in out:
+        out.append(hosts["HPC_TRANSFER_HOST"])
+    return out
 
 
 def main() -> None:
@@ -84,8 +92,8 @@ def main() -> None:
     cmd = (data.get("tool_input") or {}).get("command", "")
     if not cmd or not re.search(r"\b(?:ssh|rsync|scp)\b", cmd):
         sys.exit(0)
-    host = find_host()
-    if not host or not re.search(r"\b" + re.escape(host) + r"\b", cmd):
+    hosts = find_hosts()
+    if not hosts or not any(re.search(r"\b" + re.escape(h) + r"\b", cmd) for h in hosts):
         sys.exit(0)  # only police commands targeting the configured cluster
 
     for pat, reason in RULES:
