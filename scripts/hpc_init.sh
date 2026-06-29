@@ -33,9 +33,10 @@ echo "hpc_init: ensured $gi ignores .hpc_audit.log, .hpc_root_verified, __pycach
 cat <<EOF
 
 Next steps:
-  1. Edit $cfg — set HPC_HOST, HPC_ACCOUNT, HPC_REMOTE_ROOT, HPC_PARTITION,
-     HPC_MAIL_USER, HPC_PUSH_PATHS.
-  2. Confirm ~/.ssh/config has the HPC_HOST alias (see reference/ssh_setup.md).
+  1. Edit $cfg — set HPC_HOST, HPC_TRANSFER_HOST, HPC_ACCOUNT, HPC_REMOTE_ROOT,
+     HPC_PARTITION, HPC_MAIL_USER, HPC_PUSH_PATHS.
+  2. Confirm ~/.ssh/config has the HPC_HOST (and HPC_TRANSFER_HOST) aliases
+     (see reference/ssh_setup.md).
   3. Validate:  bash "$HERE/hpc_selftest.sh"
-  4. Log in:    bash "$HERE/hpc_login.sh"   (you type the OTP)
+  4. Log in:    bash "$HERE/hpc_login.sh"   (warms both SSH sockets)
 EOF

@@ -1,13 +1,24 @@
 # SSH setup (one-time, per machine)
 
-The whole skill assumes an SSH alias with connection multiplexing, so you type your OTP/credential once per session and every later `ssh`/`rsync`/`scp` rides the same socket without re-prompting. Add this block to `~/.ssh/config` and set `HPC_HOST` in `hpc.env` to the alias.
+The skill assumes SSH aliases with connection multiplexing so transfers are fast
+and prompt-free. Orion uses your NMBU username + password; if you set up an SSH
+key there is no password prompt at all. Add these blocks to `~/.ssh/config`.
 
-## GenomeDK
+## Orion
 
 ```
-Host genomedk
-	Hostname login.genome.au.dk
-	User <your-username>
+Host orion
+	Hostname login.orion.nmbu.no
+	User <your-nmbu-username>
+	ControlMaster auto
+	ControlPath ~/.ssh/cm-%r@%h:%p
+	ControlPersist 12h
+	ServerAliveInterval 60
+	ServerAliveCountMax 3
+
+Host orion-filemanager
+	Hostname filemanager.orion.nmbu.no
+	User <your-nmbu-username>
 	ControlMaster auto
 	ControlPath ~/.ssh/cm-%r@%h:%p
 	ControlPersist 12h
@@ -15,13 +26,27 @@ Host genomedk
 	ServerAliveCountMax 3
 ```
 
-- `ControlMaster auto` + `ControlPath` + `ControlPersist 12h` are what let `hpc_login.sh` warm a socket that survives ~12 h. Without them, every command re-prompts for the OTP. `hpc_login.sh` runs `ssh -G <host>` on startup and prints a warning pointing back here if multiplexing is not configured for `HPC_HOST` — so a missing or incomplete `Host` block surfaces as one clear message rather than a confusing "could not resolve hostname" error or a repeated OTP prompt.
-- `bash hpc_login.sh` authenticates once (you type the OTP); after that, `ssh -O check <host>` reports the live socket and the wrappers skip the prompt.
-- The two-factor login cannot be automated. The human types the OTP. The assistant should always probe first (`ssh -O check`, or `ssh -o BatchMode=yes <host> true`) and only ask the human to run `bash hpc_login.sh` when the probe fails — if you are on a whitelisted IP, re-login may be no-friction.
-- **First login only:** GenomeDK requires two-factor enrollment on the very first login (install an authenticator app, then scan the QR from `gdk-auth-show-qr`). Without it you cannot access the account. Full walkthrough: <https://genome.au.dk/docs/getting-started/>.
+Set `HPC_HOST=orion` and `HPC_TRANSFER_HOST=orion-filemanager` in `hpc.env`.
+
+- **Two hosts on purpose.** `login.orion.nmbu.no` is a shell + job-submission
+  host that kills commands over 5 minutes. `filemanager.orion.nmbu.no` is the
+  data pipe with no time limit; both share the same filesystems. `hpc_login.sh`
+  warms a socket to both.
+- **Off-campus needs the NMBU Check Point VPN** — Orion is not on the public
+  internet. Connect the VPN first, then SSH works as if on campus.
+- **known_hosts conflict on the file manager.** If you see
+  "REMOTE HOST IDENTIFICATION HAS CHANGED" for `filemanager.orion.nmbu.no`, clear
+  the stale entry and accept the new key:
+  ```
+  ssh-keygen -R filemanager.orion.nmbu.no
+  ssh orion-filemanager true
+  ```
+- **Interactive paths (out of scope).** Open OnDemand (`apps.orion.nmbu.no`) and
+  `qlogin` give browser/interactive compute sessions. This skill is for batch
+  jobs; use those directly when you want a notebook or an interactive shell.
 
 ## Other SLURM clusters
 
-Any cluster reachable by plain SSH (password, key, or OTP) works the same way: add a `Host` block with the multiplexing options above and point `HPC_HOST` at it. Set `HPC_ACCOUNT`, `HPC_PARTITION`, and `HPC_REMOTE_ROOT` for that cluster.
-
-Clusters behind a bastion or a tunnel client (for example Teleport `tsh`, as on the Gefion DGX cluster) need a different login hop and are out of scope for these wrappers, but the push / submit / fetch logic still applies once you can `ssh`/`rsync` to a login node. The cleanest adaptation is a `Host` block whose `ProxyCommand` runs the tunnel, so the alias behaves like a normal SSH host.
+Any cluster reachable by plain SSH works: add a `Host` block with the
+multiplexing options and point `HPC_HOST` at it. Leave `HPC_TRANSFER_HOST` unset
+to reuse it. Set `HPC_ACCOUNT`, `HPC_PARTITION`, `HPC_REMOTE_ROOT` to match.
