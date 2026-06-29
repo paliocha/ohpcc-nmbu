@@ -41,7 +41,8 @@ ohpcc-nmbu/
 └── reference/
     ├── ssh_setup.md            # the ~/.ssh/config blocks to add
     ├── safety.md               # the hard rules for a shared cluster
-    └── cluster-overview.md     # nodes, partitions, modules, snapshot recovery
+    ├── cluster-overview.md     # nodes, GPUs, SLURM config, interactive jobs, snapshots
+    └── troubleshooting.md      # diagnose failed / stuck / slow jobs by symptom
 ```
 
 ---

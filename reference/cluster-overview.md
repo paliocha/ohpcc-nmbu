@@ -43,6 +43,15 @@ Slurm default memory is 3 GB per CPU if you don't set `--mem`. Request GPUs with
 `--gpus N` (it avoids hardcoding the GRES name, which can change as cards are
 added); confirm the live GRES with `sinfo -o "%n %G"`.
 
+The table above lists the **batch-schedulable** nodes you can `sbatch` to. The
+full cluster is larger and heterogeneous — per the wiki *Cluster overview*: **25
+compute nodes, 4,736 CPU cores, 23.5 TB RAM, 11 GPUs (8× Blackwell + 3× Quadro
+RTX 8000), 3.2 PB parallel storage (IBM ESS / GPFS, exported over NFS)**, mixing
+AMD EPYC and Intel Xeon generations, RHEL 9 (most) or 10 (newest). Node-local
+`$TMPDIR` ranges ~3–15 TB NVMe depending on node; the newest nodes have 100 Gbit
+to storage. Older CPU nodes and the RTX 8000 GPUs are not currently exposed as
+partitions you can submit to — `sinfo` shows what you can actually use.
+
 ## GPUs (`GPU` partition, node `gn-41`)
 
 Snapshot 2026-06-29 (confirm with `nvidia-smi` inside a GPU job):
@@ -51,6 +60,10 @@ Snapshot 2026-06-29 (confirm with `nvidia-smi` inside a GPU job):
   each (97887 MiB), compute capability **12.0** (`sm_120`), 600 W, MIG disabled.
 - Driver **590.48.01**, which supports CUDA runtimes up to **13.1** (only a
   toolkit *newer* than that would fail to run).
+- The node is built with 8 Blackwell cards; `sinfo` currently exposes **7** as
+  schedulable (`gpu:rtxpro6000:7`) — trust `sinfo -o "%n %G"` for the live count.
+  The cluster also has **3× Quadro RTX 8000** (Turing, 48 GB) on older AMD nodes,
+  but those are not currently in a partition you can `sbatch` to.
 - Request with `--partition GPU --gpus N` (1–7 per node). Verify in the job:
   ```bash
   #SBATCH --partition=GPU
@@ -133,6 +146,16 @@ salloc -p orion -c 8 --mem 16g -t 2:00:00        # hold an allocation, attach st
 **Open OnDemand** (`https://apps.orion.nmbu.no`) gives browser-based Jupyter, RStudio, a desktop, and a terminal, each launched as a Slurm job — the no-terminal path.
 
 This skill itself drives **batch** jobs over SSH; interactive sessions are run directly (above), not through the wrappers.
+
+## Cost & overflow
+
+Orion's cost model is being finalized (rates not yet published) — contact
+orion-support@nmbu.no for budget estimates or usage questions. The habits that
+lower billing also shorten queue time: right-size with `jobinfo`, prefer `--mem`
+over `--mem-per-cpu`, use `$TMPDIR` for I/O, compress and delete old data. If a
+project needs far more CPU-hours than Orion allows, apply for national
+infrastructure via **Sigma2** — its cluster *Saga* uses the same Slurm workflow,
+so scripts (and this skill) mostly transfer by repointing `hpc.env`.
 
 ## Recovering deleted files (snapshots)
 

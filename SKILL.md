@@ -105,6 +105,9 @@ bash $S/hpc_fetch.sh results/myjob          # rsync a remote subpath back down
   (`seff` reports the same, but is currently broken on Orion — a missing perl
   library; prefer `jobinfo`, or `sacct -j <jobid> --format=...,MaxRSS,ReqMem`.)
   Cancel a job with `ssh $HPC_HOST scancel <jobid>` (or `scancel -n <name>`).
+  `ssh $HPC_HOST scontrol show job <jobid>` dumps the full live job record
+  (state, reason, node, resources) while it is pending/running. When a job fails
+  or won't start, `reference/troubleshooting.md` maps symptoms to fixes.
 - **Not wrapped (run directly).** `hpc_submit.py` builds a single-node job
   (`-c` cpus, one task). Multi-node/MPI jobs and "one task per input file" arrays
   aren't covered by the wrapper — write a custom `sbatch` script (see
@@ -177,7 +180,8 @@ ohpcc-nmbu/
 └── reference/
     ├── ssh_setup.md            # the ~/.ssh/config blocks to add
     ├── safety.md               # the hard rules for Orion
-    └── cluster-overview.md     # nodes, partitions, modules, snapshot recovery (live-query first)
+    ├── cluster-overview.md     # nodes, GPUs, SLURM config, interactive jobs, snapshots (live-query first)
+    └── troubleshooting.md      # diagnose failed / stuck / slow jobs by symptom
 ```
 
 ## Porting and sharing
