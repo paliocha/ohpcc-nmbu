@@ -31,6 +31,11 @@ cd "$REMOTE_ROOT/@@REMOTE_SUBDIR@@"
 export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-1}"
 export KMP_AFFINITY=disabled
 
+# Start from a clean module environment. The compute node inherits the
+# submit-time environment (SLURM --export=ALL); purging avoids stale-module
+# reproducibility bugs. Harmless (no-op) on a node without Lmod.
+module purge 2>/dev/null || true
+
 # --- project setup (HPC_JOB_SETUP / --setup): env activation, caches -------
 @@SETUP@@
 
