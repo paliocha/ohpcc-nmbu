@@ -74,6 +74,7 @@ def load_config() -> dict:
         raise SystemExit(f"HPC_REMOTE_ROOT must be absolute: {cfg['HPC_REMOTE_ROOT']}")
     cfg.setdefault("HPC_LOCAL_ROOT", str(Path(cfg_path).resolve().parent))
     cfg.setdefault("HPC_CODE_SUBDIR", "repo")
+    cfg.setdefault("HPC_TRANSFER_HOST", cfg["HPC_HOST"])
     cfg["_config_path"] = cfg_path
     return cfg
 
@@ -237,8 +238,11 @@ def main() -> None:
         print(rendered)
         return
 
-    # Confirm the root is really ours before writing anything to it.
-    verify_root(host, root, cfg["HPC_LOCAL_ROOT"])
+    # Confirm the root is really ours before writing anything to it. The
+    # ownership probe goes through HPC_TRANSFER_HOST (where push lands and the
+    # shared filesystem is reached) so the cached marker matches the one the
+    # bash wrappers write — the script write + sbatch below still use HPC_HOST.
+    verify_root(cfg["HPC_TRANSFER_HOST"], root, cfg["HPC_LOCAL_ROOT"])
 
     remote_path = f"{root}/slurm_logs/{args.name}.slurm"
     qpath = shlex.quote(remote_path)
