@@ -43,6 +43,34 @@ Slurm default memory is 3 GB per CPU if you don't set `--mem`. Request GPUs with
 `--gpus N` (it avoids hardcoding the GRES name, which can change as cards are
 added); confirm the live GRES with `sinfo -o "%n %G"`.
 
+## GPUs (`GPU` partition, node `gn-41`)
+
+Snapshot 2026-06-29 (confirm with `nvidia-smi` inside a GPU job):
+
+- **7× NVIDIA RTX PRO 6000 Blackwell Server Edition** per node, **~96 GB VRAM**
+  each (97887 MiB), compute capability **12.0** (`sm_120`), 600 W, MIG disabled.
+- Driver **590.48.01**, which supports CUDA runtimes up to **13.1** (only a
+  toolkit *newer* than that would fail to run).
+- Request with `--partition GPU --gpus N` (1–7 per node). Verify in the job:
+  ```bash
+  #SBATCH --partition=GPU
+  #SBATCH --gpus=1
+  nvidia-smi
+  ```
+
+**Toolkit caveat — important for Blackwell.** The Lmod CUDA modules top out at
+**CUDA 12.1** (`module load CUDA/12.1.1`, `nvcc` 12.1.105) and the only `cuDNN`
+module is **8.0.4**; both predate Blackwell `sm_120`, so code built against them
+will not produce Blackwell-native kernels (and old framework binaries may fail
+or fall back to slow paths). For deep-learning frameworks, install via micromamba
+with a **CUDA 12.8+ build** — e.g. a recent PyTorch `cu128`/`cu129` wheel or
+conda `pytorch` with a matching `pytorch-cuda` — the driver (CUDA 13.1) runs
+those newer runtimes fine. `module load CUDA` is OK only for plain CUDA ≤12.1
+work that does not need `sm_120`.
+
+GPU-relevant modules available: `CUDA` 10.1 / 11.1 / 11.7 / 12.1, `cuDNN` 8.0.4,
+`NCCL` 2.8 / 2.12, `NVHPC` 22.7, `magma` 2.5.4.
+
 ## Software (modules)
 
 Orion uses Lmod with EasyBuild-built modules on the shared filesystem (~321

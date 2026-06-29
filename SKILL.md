@@ -140,6 +140,13 @@ For I/O-heavy work, stage inputs to the node-local SSD `$TMPDIR` (up to ~15 TB)
 inside `--command` and copy results back to `$PROJECTS` at the end — reading many
 small files over NFS is slow and hurts the whole cluster.
 
+The GPU node carries **RTX PRO 6000 Blackwell** cards (compute capability
+`sm_120`, ~96 GB VRAM). The Lmod `CUDA` modules cap at 12.1 and `cuDNN` at 8.0.4,
+which predate Blackwell — so install deep-learning frameworks via micromamba with
+a **CUDA 12.8+ build** (e.g. PyTorch `cu128`) rather than `module load CUDA`. The
+driver (590, CUDA 13.1) runs the newer runtime fine. Full details and the live
+`nvidia-smi`/`module avail` commands are in `reference/cluster-overview.md`.
+
 ## What is in this directory
 
 ```
